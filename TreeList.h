@@ -8,7 +8,6 @@ template <class T>
 class TreeList {
 public: // just for debugging simplicity
 
-
     struct Node{
         T value;
         long diff=0;
@@ -253,6 +252,19 @@ public:
         if (node)
             return node->value;
         throw std::out_of_range(std::to_string(index) + " is out of range");
+    }
+
+
+    void push_back(T value){
+        if (root == nullptr){
+            root = new Node(0, value);
+            return;
+        }
+
+        Node* current = root;
+        while (current->bigger)
+            current = current->bigger;
+        current->bigger = new Node(1, value);
     }
 
 };

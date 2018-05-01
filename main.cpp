@@ -97,11 +97,24 @@ TEST(TreeList_test, deletion){
             vec.erase(vec.begin() + index);
             list.remove(index);
         }
+        if (list.root)
+            EXPECT_GE(list.root->diff, 0);
         for (int j = 0; j < vec.size(); ++j)
             EXPECT_EQ(vec.at(j), list.at(j));
     }
 
 
+}
+
+
+TEST(TreeList_test, push_back){
+    TreeList<int> list;
+    int elements[] = {9,8,7,6,5,4,99,22,3,2};
+    for (int i = 0; i < sizeof(elements) / sizeof(*elements); ++i){
+        list.push_back(elements[i]);
+        for (int j = 0; j <= i; ++j)
+            EXPECT_EQ(elements[j], list[j]);
+    }
 }
 
 int main(int argc, char** argv){
