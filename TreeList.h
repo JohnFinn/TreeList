@@ -2,18 +2,34 @@
 
 #include <cassert>
 #include <stdexcept>
-
+#include <stack>
 
 template <class T>
 class TreeList {
 public: // just for debugging simplicity
 
+
     struct Node{
         T value;
         long diff=0;
+        unsigned long count=0;
         Node *bigger= nullptr, *smaller = nullptr, *parent= nullptr;
 
         Node(long diff, T value) : diff(diff), value(value) {} // TODO T& and T&&
+
+        unsigned long bigger_count(){
+            if (bigger)
+                return bigger->count;
+            else
+                return 0;
+        }
+
+        unsigned long smaller_count(){
+            if (smaller)
+                return smaller->count;
+            else
+                return 0;
+        }
 
         // child of this->parent will be node instead of this
         void set_parent_ref(Node* node){
@@ -50,8 +66,7 @@ public: // just for debugging simplicity
             assert(bigger != nullptr);
             Node *b = bigger, *p = parent;
 
-            set_parent_ref(bigger);
-            bigger->parent = parent;
+            set_parent_son(bigger);
 
             Node* bs = bigger->smaller;
             bigger->smaller = this;
@@ -71,8 +86,7 @@ public: // just for debugging simplicity
             assert(smaller != nullptr);
             Node *s = smaller, *p = parent;
 
-            set_parent_ref(smaller);
-            smaller->parent = parent;
+            set_parent_son(smaller);
 
             Node* sb = smaller->bigger;
             smaller->bigger = this; // become big child of our small child
@@ -110,6 +124,7 @@ public:
     void insert(unsigned long index, T value){
         if (root == nullptr){
             root = new Node(0, value);
+            root->count = 1;
             return;
         }
 
@@ -130,6 +145,8 @@ public:
                 }
 
             } else if (index > current_index){ // don't need to offset anything
+//                if (current->bigger_count() > current->smaller_count())
+
                 if (not current->bigger) { // found !!!
                     current->make_bigger(1, value); // insert new node
                     break;
@@ -139,7 +156,7 @@ public:
                 ++current->diff; // offset with the smaller half. current_index wasn't given any offset
                 ++current_index;
                 if (not current->smaller) {
-                    current->make_smaller(-1,value); // unoffset new node (that's why -1 - 1)
+                    current->make_smaller(-1,value);
                     break;
                 }
                 --current->smaller->diff; // unoffset smaller half
@@ -268,3 +285,56 @@ public:
     }
 
 };
+
+// output mermaid graph
+// each node has index, count, diff
+template <class T, class stream_t>
+stream_t& operator << (stream_t& stream, TreeList<T> tree){
+    typedef typename TreeList<T>::Node* Nodeptr;
+    if (not tree.root) return stream;
+
+    std::stack<Nodeptr> stack;
+    std::stack<unsigned long> indices;
+    stack.push(tree.root);
+
+    unsigned long current_index = 0;
+    if (tree.root)
+        current_index = tree.root->diff;
+
+    indices.push(current_index);
+
+    while (not stack.empty()){
+        Nodeptr current = stack.top();
+        stack.pop();
+        current_index = indices.top();
+        indices.pop();
+        stream << current << "((" << current_index << ", " << current->count << ", " << current->diff << "))\n";
+        if (current->bigger) {
+            indices.push(current_index + current->bigger->diff);
+            stack.push(current->bigger);
+        }
+        if (current->smaller) {
+            indices.push(current_index + current->smaller->diff);
+            stack.push(current->smaller);
+        }
+
+    }
+
+    stack.push(tree.root);
+
+    while (not stack.empty()){
+        Nodeptr current = stack.top();
+        stack.pop();
+        if (current->smaller){
+            stream << current << "-->" << current->smaller << '\n';
+            stack.push(current->smaller);
+        }
+
+        if (current->bigger) {
+            stream << current << "-->" << current->bigger << '\n';
+            stack.push(current->bigger);
+        }
+    }
+
+    return stream;
+}

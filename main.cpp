@@ -3,6 +3,7 @@
 
 #include "TreeList.h"
 #include <vector>
+#include <iostream>
 
 TEST(TreeList_test, insertion){
     TreeList<unsigned long> list;
@@ -101,6 +102,7 @@ TEST(TreeList_test, deletion){
             EXPECT_GE(list.root->diff, 0);
         for (int j = 0; j < vec.size(); ++j)
             EXPECT_EQ(vec.at(j), list.at(j));
+//        std::cout << list << '\n';
     }
 
 
