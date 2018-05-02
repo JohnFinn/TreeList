@@ -114,8 +114,10 @@ TEST(TreeList_test, push_back){
     int elements[] = {9,8,7,6,5,4,99,22,3,2};
     for (int i = 0; i < sizeof(elements) / sizeof(*elements); ++i){
         list.push_back(elements[i]);
+        std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
         for (int j = 0; j <= i; ++j)
-            EXPECT_EQ(elements[j], list[j]);
+            EXPECT_EQ(elements[j], list.at(j));
+
     }
 }
 

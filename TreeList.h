@@ -57,6 +57,7 @@ public: // just for debugging simplicity
             smaller = new Node(differ, val);
             smaller->parent = this;
         }
+
         /*
             bigger will be our parent; our bigger child will be bigger smaller child
             this will be SMALLER of bigger child
@@ -64,6 +65,17 @@ public: // just for debugging simplicity
         */
         void small_rotate(){
             assert(bigger != nullptr);
+            // deal with counts
+            count -= (bigger->bigger_count() + 1);
+            bigger->count += smaller_count() + 1;
+
+            // deal with relative offsets
+            long old_diff = diff, old_bdiff = bigger->diff;
+            bigger->diff += old_diff; // moving up, including new offset component
+            diff -= bigger->diff; // moving down, excluding extra offset component
+            if (bigger->smaller) bigger->smaller->diff += old_bdiff;
+
+
             Node *b = bigger, *p = parent;
 
             set_parent_son(bigger);
@@ -71,10 +83,9 @@ public: // just for debugging simplicity
             Node* bs = bigger->smaller;
             bigger->smaller = this;
             parent = bigger;
+
             bigger = bs;
-
             if (bs) bs->parent = this;
-
         }
 
         /*
@@ -275,13 +286,35 @@ public:
     void push_back(T value){
         if (root == nullptr){
             root = new Node(0, value);
+            root->count = 1;
             return;
         }
 
+        // change root if first rotation touches it
+        if (root->bigger and root->bigger->count << 1 > root->count - 1){
+             // bigger subtree has more elements (bc > sc <=> bc > cc - bc - 1 <=> 2bc > cc-1
+
+            root->small_rotate();
+            root = root->parent;
+        }
+        // now root won't need to move
+
+        // find last element
         Node* current = root;
-        while (current->bigger)
+        while (current->bigger) {
+            ++current->count;
+            if (current->bigger_count() > current->smaller_count()) { // bigger subtree has more elements (bc > sc <=> bc > cc - bc - 1 <=> 2bc > cc-1
+                current->small_rotate();
+                --current->count; // our way changed
+                current = current->parent; // return to our way
+                if (not current->bigger)
+                    break;
+            }
             current = current->bigger;
-        current->bigger = new Node(1, value);
+        }
+        ++current->count;
+        current->make_bigger(1, value);
+        current->bigger->count = 1;
     }
 
 };
