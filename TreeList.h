@@ -18,6 +18,12 @@ public: // just for debugging simplicity
 
         Node(long diff, const T& value) : diff(diff), value(value) {} // TODO T& and T&&
 
+        bool operator==(const Node& other) const {
+          return value == other.value and diff == other.diff and
+                 height == other.height and bigger == other.bigger and
+                 smaller == other.smaller and parent == other.parent;
+        }
+
         bool bad_slope() const {
             return std::abs(slope()) > 1;
         }
@@ -80,7 +86,7 @@ public: // just for debugging simplicity
         }
 
         // creates bigger child
-        void make_bigger(long differ, T val){
+        void make_bigger(long differ, const T& val){
             assert(not bigger);
             bigger = new Node(differ, val);
             bigger->parent = this;
@@ -90,7 +96,7 @@ public: // just for debugging simplicity
         }
 
         // creates smaller child
-        void make_smaller(long differ, T val){
+        void make_smaller(long differ, const T& val){
             assert(not smaller);
             smaller = new Node(differ, val);
             smaller->parent = this;
@@ -269,13 +275,12 @@ public:
         fix(current);
     }
 
-    // remove value at index
-    // offset everything bigger to the left
-    // do nothing if no such index
-    void remove(unsigned long index){
+    // move all elements left that lie after index
+    // return Node, that has to be removed, because leftmost Node of moving side will have same index
+    // if no Node with index exist, returns nullptr
+    Node* move_left(unsigned long index){
         if (not root)
-            return;
-
+            return nullptr;
         // looking for node and moving parts of list to the left if we need to
         Node* current = root;
         unsigned long current_index = current->diff;
@@ -283,16 +288,16 @@ public:
             if (index == current_index){
                 if (current->bigger)
                     --current->bigger->diff; // move right part to the left
-                break; // found
+                return current; // found
             } else if (index > current_index){
-                if (not current->bigger)
-                    break;
+                if (not current->bigger) // index is too big
+                    return nullptr;
                 current = current->bigger;
             } else { // index < current_index
                 assert(current->smaller); // in list no missing indices possible
                 // move right half to the left, inclusive
                 --current->diff; // move right half to the left
-                --current_index; // current_index also moved
+                --current_index; // current_index is index of current which is moved
                 ++current->smaller->diff; // move left half right, because we didn't need to move it
                 // [x x x x x] -> x [x x x x _] -> [x (xx) x x _]
                 // now there are two nodes in the tree with same indices
@@ -300,51 +305,58 @@ public:
             }
             current_index += current->diff;
         }
+    }
 
-        assert(current);
-        // everything after index must be moved left by 1 at this point
+    // remove value at index
+    // offset everything bigger to the left
+    // do nothing if no such index
+    void remove(unsigned long index){
 
-        Node* parent = current->parent;
+        Node* target = move_left(index);
+        if (not target)
+            return;
+
+        Node* parent = target->parent;
 
         // removing element
-        if (not current->smaller and not current->bigger){
-            current->set_parent_ref(nullptr);
-            if (current == root)
+        if (not target->smaller and not target->bigger){
+            target->set_parent_ref(nullptr);
+            if (target == root)
                 root = nullptr;
         }
-        else if (not current->smaller and current->bigger){
-            if (current == root)
-                root = current->bigger;
-            if (current->bigger)
-                current->bigger->diff += current->diff; // recalculating relative offset
-            current->set_parent_son(current->bigger);
+        else if (not target->smaller and target->bigger){
+            if (target == root)
+                root = target->bigger;
+            if (target->bigger)
+                target->bigger->diff += target->diff; // recalculating relative offset
+            target->set_parent_son(target->bigger);
         }
-        else if (current->smaller and not current->bigger){
-            if (current == root)
-                root = current->smaller;
-            if (current->smaller)
-                current->smaller->diff += current->diff; // recalculating relative offset
-            current->set_parent_son(current->smaller);
+        else if (target->smaller and not target->bigger){
+            if (target == root)
+                root = target->smaller;
+            if (target->smaller)
+                target->smaller->diff += target->diff; // recalculating relative offset
+            target->set_parent_son(target->smaller);
         }
-        else { // find next (min, but larger then current) and place here
-            Node* successor = current->successor();
+        else { // find next (min, but larger then target) and place here
+            Node* successor = target->successor();
             assert(successor != root);
             assert(successor);
             assert(not successor->smaller);
-            assert(current->bigger);
+            assert(target->bigger);
 
-            current->value = successor->value; // swap successor and current
+            target->value = std::move(successor->value); // swap successor and target
             parent = successor->parent; // we will delete successor's node
             // move successor->bigger subtree up
             if (successor->bigger)
                 successor->bigger->diff += successor->diff; // diff are relative to parent, that's why we're changing it
             successor->set_parent_son(successor->bigger);
 
-            current = successor; // trick to free right memory
+            target = successor; // trick to free right memory
         }
-        delete current; // don't forget to free memory
+        delete target; // don't forget to free memory
         if (not parent) // means root is deleted
-            return; // don't need to fix anything if root is deleted
+            return; // don't need to fix anything if root is deleted (parent is successor's parent)
         else {
             parent->fix_height();
             fix(parent);

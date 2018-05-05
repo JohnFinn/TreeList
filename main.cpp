@@ -159,6 +159,19 @@ TEST(TreeList_test, push_back2){
     }
 }
 
+TEST(TreeList_test, move_left){
+    // not proper test
+    TreeList<int> list;
+    typedef TreeList<int>::Node Node;
+    list.push_back(1);
+    Node n = *list.root;
+    EXPECT_EQ(list.move_left(1), nullptr);
+    EXPECT_EQ(*list.root, n);
+    auto result = list.move_left(0);
+    EXPECT_EQ(result, list.root);
+    EXPECT_EQ(*result, n);
+}
+
 
 TEST(TreeList_test, root_deletion){
     TreeList<int> list;
