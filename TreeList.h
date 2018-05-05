@@ -397,6 +397,12 @@ public:
     }
 
 
+    void set(unsigned long index, const T& value){ at(index) = value; }
+
+
+    void set(unsigned long index, T&& value){ at(index) = std::move(value); }
+
+
     void push_back(const T& value){
         if (root == nullptr){
             root = new Node(0, value);
