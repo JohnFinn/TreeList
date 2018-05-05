@@ -121,6 +121,23 @@ TEST(TreeList_test, push_back){
     }
 }
 
+TEST(TreeList_test, push_back2){
+//    std::freopen("test", "w", stdout);
+    TreeList<int> list;
+    std::vector<int> vec;
+    int N = 100;
+    for (int i = 0; i <= N; ++i){
+        if (i == 7)
+            i;
+        list.push_back(i);
+        vec.push_back(i);
+        std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
+        for (int j = 0; j <= i; ++j)
+            EXPECT_EQ(vec.at(j), list.at(j));
+
+    }
+}
+
 int main(int argc, char** argv){
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
