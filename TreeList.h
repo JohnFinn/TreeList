@@ -16,17 +16,17 @@ public: // just for debugging simplicity
         unsigned long height=1; // maximum height
         Node *bigger= nullptr, *smaller = nullptr, *parent= nullptr;
 
-        Node(long diff, T value) : diff(diff), value(value) {} // TODO T& and T&&
+        Node(long diff, const T& value) : diff(diff), value(value) {} // TODO T& and T&&
 
-        bool bad_slope(){
+        bool bad_slope() const {
             return std::abs(slope()) > 1;
         }
 
-        bool height_is_correct(){
+        bool height_is_correct() const {
             return height == 1 + std::max(sheight(), bheight());
         }
 
-        unsigned long index(){
+        unsigned long index() const {
             long s = diff;
             for (Node* current = parent; current; current = current->parent)
                 s += current->diff;
@@ -45,29 +45,29 @@ public: // just for debugging simplicity
             }
         }
 
-        bool is_smaller(){
+        bool is_smaller() const {
             return parent and parent->smaller == this;
         }
 
-        bool is_bigger(){
+        bool is_bigger() const {
             return parent and parent->bigger == this;
         }
 
-        unsigned long sheight(){
+        unsigned long sheight() const {
             if (smaller)
                 return smaller->height;
             else
                 return 0;
         }
 
-        unsigned long bheight(){
+        unsigned long bheight() const {
             if (bigger)
                 return bigger->height;
             else
                 return 0;
         }
 
-        long slope(){
+        long slope() const {
             return bheight() - sheight();
         }
 
@@ -160,7 +160,7 @@ public: // just for debugging simplicity
         }
 
         // return min node, larger then current
-        Node* successor(){
+        Node* successor() const {
             assert(bigger);
             Node* current = bigger;
             long current_diff = current->diff;
@@ -183,12 +183,48 @@ public: // just for debugging simplicity
     Node* root = nullptr;
 public:
     TreeList()= default;
-    ~TreeList(){} // TODO remove all Nodes
+    ~TreeList(){ clear(); }
+
+    TreeList(TreeList&& other) noexcept : root(other.root) { if (&other != this) other.root = nullptr; }
+
+    TreeList(const TreeList& other){ *this = other; }
+
+    TreeList& operator=(TreeList&& other) noexcept {
+        if (this == &other)
+            return *this;
+        root = other.root;
+        other.root = nullptr;
+        return *this;
+    }
+
+    TreeList& operator=(const TreeList& other){
+        // TODO improve performance
+        if (this == &other)
+            return *this;
+        clear();
+        for (unsigned long index = 0; true; ++index){
+            try{
+                insert(index, other.at(index));
+            } catch (std::out_of_range& ex){
+                break;
+            }
+        }
+        return *this;
+    }
+
+
+    void clear(){
+        // TODO improve by iterating through all nodes
+        while (root)
+            remove(root->diff);
+        root = nullptr;
+    }
+
 
     // insert value before index
     // if index >= number of items, insert after last
     // TODO pass by &, &&
-    void insert(unsigned long index, T value){
+    void insert(unsigned long index, const T& value){
         if (root == nullptr){
             root = new Node(0, value);
             return;
@@ -316,7 +352,7 @@ public:
     }
 
     // Node at index, nullptr if not exist
-    Node* get_node(unsigned long index){
+    Node* get_node(unsigned long index) const {
         if (not root) return nullptr;
         Node* current = root;
         unsigned long current_index = current->diff;
@@ -336,12 +372,12 @@ public:
     }
 
 
-    T& operator[](unsigned long index){
+    T& operator[](unsigned long index) const {
         return get_node(index)->value;
     }
 
 
-    T& at(unsigned long index){
+    T& at(unsigned long index) const {
         Node* node = get_node(index);
         if (node)
             return node->value;
@@ -349,7 +385,7 @@ public:
     }
 
 
-    void push_back(T value){
+    void push_back(const T& value){
         if (root == nullptr){
             root = new Node(0, value);
             return;
@@ -368,11 +404,7 @@ public:
     // accepts parent of inserted/deleted node
     // assumes correct height of node and unfixed height of it's parent
     void fix(Node* node){
-        if (not node->parent)
-            return;
-
-        bool was_smaller;
-        long prev_height, height_change, slope = node->slope();
+        long slope = node->slope();
         do {
             assert(slope == 2 or slope == -2 or slope == 1 or slope == -1 or slope == 0);
             if (slope == 2){
@@ -391,17 +423,11 @@ public:
                 root = node;
                 break;
             }
-            was_smaller = node->is_smaller();
             node = node->parent;
-            prev_height = node->height;
             node->fix_height(); // rotations doesn't change upper heights
-            height_change = node->height - prev_height;
-            if (was_smaller)
-                height_change = -height_change; // when smaller node height is changed, slope should change to the smaller side
-            // but we need slope unchanged in the loop
-
             slope = node->slope();
-        } while (std::abs(slope) > 1 or (node->parent and (not node->parent->height_is_correct() or node->parent->bad_slope())));// slope and height_change should have same sign, if we arrived from bigger subtree and different signs if we arrive from smaller
+        } while (node->bad_slope() or (node->parent and
+                (not node->parent->height_is_correct() or node->parent->bad_slope())));
     }
 
 };
@@ -409,7 +435,7 @@ public:
 // output mermaid graph
 // each node has index, height, value
 template <class T, class stream_t>
-stream_t& operator << (stream_t& stream, TreeList<T> tree){
+stream_t& operator << (stream_t& stream, TreeList<T>& tree){
     typedef typename TreeList<T>::Node* Nodeptr;
     if (not tree.root) return stream;
 

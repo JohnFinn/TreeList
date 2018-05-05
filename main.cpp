@@ -146,8 +146,6 @@ TEST(TreeList_test, push_back2){
     std::vector<int> vec;
     int N = 2000;
     for (int i = 0; i <= N; ++i){
-        if (i == 7)
-            i;
         list.push_back(i);
         vec.push_back(i);
 //        std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
@@ -158,6 +156,29 @@ TEST(TreeList_test, push_back2){
             EXPECT_LE(std::abs(node->slope()), 1);
         }
 
+    }
+}
+
+
+TEST(TreeList_test, root_deletion){
+    TreeList<int> list;
+    std::vector<int> vec;
+    for (int i = 0; i < 100; ++i) {
+        list.push_back(i);
+        vec.push_back(i);
+    }
+
+    while (list.root) {
+        auto index = list.root->diff;
+        list.remove(index);
+        vec.erase(vec.begin() + index);
+        for (int j = 0; j < vec.size(); ++j) {
+            EXPECT_EQ(vec.at(j), list.at(j));
+            auto node = list.get_node(j);
+            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_LE(std::abs(node->slope()), 1);
+        }
+        std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
     }
 }
 
