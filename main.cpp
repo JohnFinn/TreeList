@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <chrono> // for time measurement
 
 
 TEST(TreeList_test, insertion){
@@ -194,6 +195,94 @@ TEST(TreeList_test, root_deletion){
         std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
     }
 }
+
+// duration variable
+#define MEASURE_TIME(expr, result)\
+{\
+auto before = std::chrono::high_resolution_clock::now();\
+expr;\
+auto after = std::chrono::high_resolution_clock::now();\
+result = std::chrono::duration_cast<std::chrono::nanoseconds>(after-before).count();\
+}\
+
+
+
+void speed_results(unsigned long N){
+    TreeList<int> list;
+    std::ofstream fout("results");
+
+    std::srand(0);
+    long duration;
+    for (int i = 0; i < N; ++i){
+        fout << i << ' ';
+
+        MEASURE_TIME(list.push_back(i), duration)
+        fout << duration << ' ';
+
+        // i + 1 elements now
+        int index = std::rand() % (i + 1); // value in [0, i] interval
+        MEASURE_TIME(list.remove(index), duration)
+        fout << duration << ' ';
+        // i elements
+
+        index = std::rand() % (i + 1);
+        MEASURE_TIME(list.insert(index, i), duration);
+        fout << duration << ' ';
+        // i + 1 elements
+
+        index = std::rand() % (i + 1);
+        MEASURE_TIME(int _ = list.at(index), duration)
+        fout << duration << ' ';
+
+        index = std::rand() % (i + 1);
+        MEASURE_TIME(list.set(index, 888), duration);
+        fout << duration << '\n';
+    }
+
+}
+
+void vector_speed(unsigned long N){
+    std::ofstream fout("results-vec");
+    std::vector<int> vec;
+
+    std::srand(0);
+    long duration;
+
+    for (int i = 0; i < N; ++i){
+        fout << i << ' ';
+
+        MEASURE_TIME(vec.push_back(i), duration)
+        fout << duration << ' ';
+
+        // i + 1 elements now
+        int index = std::rand() % (i + 1); // value in [0, i] interval
+        MEASURE_TIME(vec.erase(vec.begin()+index), duration)
+        fout << duration << ' ';
+        // i elements
+
+        index = std::rand() % (i + 1);
+        MEASURE_TIME(vec.insert(vec.begin()+index, i), duration);
+        fout << duration << ' ';
+        // i + 1 elements
+
+        index = std::rand() % (i + 1);
+        MEASURE_TIME(int _ = vec.at(index), duration)
+        fout << duration << ' ';
+
+        index = std::rand() % (i + 1);
+        MEASURE_TIME(vec.at(index) = 888, duration);
+        fout << duration << '\n';
+    }
+}
+
+
+// easer to start from IDE
+TEST(TreeList_test, speed){
+    unsigned long N = 1000000;
+    speed_results(N);
+    vector_speed(N);
+}
+
 
 
 int main(int argc, char** argv){
