@@ -18,6 +18,23 @@ public: // just for debugging simplicity
 
         Node(long diff, T value) : diff(diff), value(value) {} // TODO T& and T&&
 
+        bool bad_slope(){
+            return std::abs(slope()) > 1;
+        }
+
+        bool height_is_correct(){
+            return height == 1 + std::max(sheight(), bheight());
+        }
+
+        unsigned long index(){
+            long s = diff;
+            for (Node* current = parent; current; current = current->parent)
+                s += current->diff;
+            assert(s >= 0);
+            return s;
+
+        }
+
         // child of this->parent will be node instead of this
         void set_parent_ref(Node* node){
             if (parent){
@@ -194,8 +211,6 @@ public:
                 }
 
             } else if (index > current_index){ // don't need to offset anything
-//                if (current->bigger_count() > current->smaller_count())
-
                 if (not current->bigger) { // found !!!
                     current->make_bigger(1, value); // insert new node
                     break;
@@ -214,6 +229,8 @@ public:
             }
             current_index += current->diff;
         }
+
+        fix(current);
     }
 
     // remove value at index
@@ -251,6 +268,8 @@ public:
         assert(current);
         // everything after index must be moved left by 1 at this point
 
+        Node* parent = current->parent;
+
         // removing element
         if (not current->smaller and not current->bigger){
             current->set_parent_ref(nullptr);
@@ -279,6 +298,7 @@ public:
             assert(current->bigger);
 
             current->value = successor->value; // swap successor and current
+            parent = successor->parent; // we will delete successor's node
             // move successor->bigger subtree up
             if (successor->bigger)
                 successor->bigger->diff += successor->diff; // diff are relative to parent, that's why we're changing it
@@ -287,6 +307,12 @@ public:
             current = successor; // trick to free right memory
         }
         delete current; // don't forget to free memory
+        if (not parent) // means root is deleted
+            return; // don't need to fix anything if root is deleted
+        else {
+            parent->fix_height();
+            fix(parent);
+        }
     }
 
     // Node at index, nullptr if not exist
@@ -309,9 +335,11 @@ public:
         }
     }
 
+
     T& operator[](unsigned long index){
         return get_node(index)->value;
     }
+
 
     T& at(unsigned long index){
         Node* node = get_node(index);
@@ -340,47 +368,46 @@ public:
     // accepts parent of inserted/deleted node
     // assumes correct height of node and unfixed height of it's parent
     void fix(Node* node){
-        assert(node->bigger != nullptr or node->smaller != nullptr);
         if (not node->parent)
             return;
 
-        node = node->parent;
-        long prev_height = node->height;
-        node->fix_height();
-        long height_change = node->height - prev_height;
-
-        long slope = node->slope();
-
-        while (std::abs(slope + height_change) > 1) {
-            assert(slope == 2 or slope == -2 or slope == 1 or slope == -1);
+        bool was_smaller;
+        long prev_height, height_change, slope = node->slope();
+        do {
+            assert(slope == 2 or slope == -2 or slope == 1 or slope == -1 or slope == 0);
             if (slope == 2){
-                if (node->bigger->slope() < 0) // == -1, left-heavy
-                    node->bigger->big_rotate();
+                if (node->bigger->slope() < 0) // == -1, left-heavy,
+                    node->bigger->big_rotate(); // change zig-zag path to zig-zig, not zag-zig
                 node->small_rotate();
-                node = node->parent;
+                node = node->parent; // rotation moved node down
             } else if (slope == -2){
-                if (node->smaller->slope() < 0)
+                if (node->smaller->slope() > 0)
                     node->smaller->small_rotate();
                 node->big_rotate();
                 node = node->parent;
             }
 
-            if (not node->parent){
+            if (not node->parent){ // root is rotated down
                 root = node;
                 break;
             }
-            node = node->parent; // one is due to rotation, another is because we're going up
+            was_smaller = node->is_smaller();
+            node = node->parent;
             prev_height = node->height;
-            node->fix_height();
+            node->fix_height(); // rotations doesn't change upper heights
             height_change = node->height - prev_height;
+            if (was_smaller)
+                height_change = -height_change; // when smaller node height is changed, slope should change to the smaller side
+            // but we need slope unchanged in the loop
+
             slope = node->slope();
-        }
+        } while (std::abs(slope) > 1 or (node->parent and (not node->parent->height_is_correct() or node->parent->bad_slope())));// slope and height_change should have same sign, if we arrived from bigger subtree and different signs if we arrive from smaller
     }
 
 };
 
 // output mermaid graph
-// each node has index, height, diff
+// each node has index, height, value
 template <class T, class stream_t>
 stream_t& operator << (stream_t& stream, TreeList<T> tree){
     typedef typename TreeList<T>::Node* Nodeptr;
@@ -401,10 +428,11 @@ stream_t& operator << (stream_t& stream, TreeList<T> tree){
         stack.pop();
         current_index = indices.top();
         indices.pop();
-        stream << current << "((" << current_index << ", " << current->height << ", " << current->diff << "))\n";
+        stream << current << "((" << current_index << ", " << current->height
+               << ", " << current->value << "))\n";
         if (current->bigger) {
-            indices.push(current_index + current->bigger->diff);
-            stack.push(current->bigger);
+          indices.push(current_index + current->bigger->diff);
+          stack.push(current->bigger);
         }
         if (current->smaller) {
             indices.push(current_index + current->smaller->diff);

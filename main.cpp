@@ -4,6 +4,8 @@
 #include "TreeList.h"
 #include <vector>
 #include <iostream>
+#include <fstream>
+
 
 TEST(TreeList_test, insertion){
     TreeList<unsigned long> list;
@@ -42,25 +44,22 @@ TEST(TreeList_test, insertion){
         11,  4,   49,  74,  101, 41,  66,  25,  104, 99, 66,  98,  20,  113,
         6,   64,  12,  0,   71,  122, 63};
 
-/*
-    unsigned long indices [] = {0, 0, 0, 0, 0, 0};
-    unsigned long elements[] = {1, 2, 3, 4, 5, 6};
-    unsigned long results [] = {6, 5, 4, 3, 2, 1};
-*/
 
-    for (int i = 0; i < sizeof(indices) / sizeof(*indices); ++i)
+
+    for (int i = 0; i < sizeof(indices) / sizeof(*indices); ++i){
         list.insert(indices[i], elements[i]);
+//        std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
+    }
 
-
-    for (int i = 0; i < sizeof(indices) / sizeof(*indices); ++i)
+    for (int i = 0; i < sizeof(indices) / sizeof(*indices); ++i) {
         EXPECT_EQ(list.at(i), results[i]);
-
-//    list.insert(2, 7);
-//    int index=0;
-//    for (int i : {6, 5, 7, 4, 3, 2, 1})
-//        EXPECT_EQ(list.at(index++), i);
+        auto node = list.get_node(i);
+        EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+        EXPECT_LE(std::abs(node->slope()), 1);
+    }
 
 }
+
 
 TEST(TreeList_test, insertion2){
     TreeList<int> list;
@@ -68,41 +67,56 @@ TEST(TreeList_test, insertion2){
     vec.push_back(-1); // avoid floating point exception in x % 0 operation
     list.insert(0,-1);
     std::srand(0);
-    int N = 1000;
+    int N = 2000;
     for (int i = 0; i <= N; ++i){
-        unsigned int index = std::rand() % vec.size(); // % size to make more in the middle insertions
+        unsigned long index = std::rand() % vec.size(); // % size to make more in the middle insertions
         vec.insert(vec.begin()+index, i);
         list.insert(index, i);
 
-        for (int j = 0; j < vec.size(); ++j)
+        for (int j = 0; j < vec.size(); ++j) {
             EXPECT_EQ(list.at(j), vec.at(j));
+            auto node = list.get_node(i);
+            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_LE(std::abs(node->slope()), 1);
+        }
     }
 }
 
+
 TEST(TreeList_test, deletion){
+    std::ofstream fout("test");
     TreeList<int> list;
     // N times randomly insert or delete random element
     // each time check equality
 
-    int N = 2000;
+    int N = 5000;
     std::vector<int> vec;
     std::srand(0);
     for (int i = 0; i <= N; ++i){
         list.insert(0, -1);
+        fout << "insert(0,-1)\n\n```mermaid\ngraph TD\n" << list << "```\n\n";
+
+
         vec.insert(vec.begin(), -1); // avoid FPE
         unsigned int index  = std::rand() % vec.size(); // % size to make more hits in the middle
         if (std::rand() % 2){
+            fout << "insert(" << index << ", " << i << ")\n\n";
             vec.insert(vec.begin() + index, i);
             list.insert(index, i);
         } else {
+            fout << "remove(" << index << ")\n\n";
             vec.erase(vec.begin() + index);
             list.remove(index);
         }
         if (list.root)
             EXPECT_GE(list.root->diff, 0);
-        for (int j = 0; j < vec.size(); ++j)
+        for (int j = 0; j < vec.size(); ++j) {
             EXPECT_EQ(vec.at(j), list.at(j));
-//        std::cout << list << '\n';
+            auto node = list.get_node(j);
+            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_LE(std::abs(node->slope()), 1);
+        }
+        fout << "```mermaid\ngraph TD\n" << list << "```\n\n";
     }
 
 
@@ -115,28 +129,38 @@ TEST(TreeList_test, push_back){
     for (int i = 0; i < sizeof(elements) / sizeof(*elements); ++i){
         list.push_back(elements[i]);
         std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
-        for (int j = 0; j <= i; ++j)
+        for (int j = 0; j <= i; ++j) {
             EXPECT_EQ(elements[j], list.at(j));
+            auto node = list.get_node(j);
+            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_LE(std::abs(node->slope()), 1);
+        }
 
     }
 }
+
 
 TEST(TreeList_test, push_back2){
 //    std::freopen("test", "w", stdout);
     TreeList<int> list;
     std::vector<int> vec;
-    int N = 100;
+    int N = 2000;
     for (int i = 0; i <= N; ++i){
         if (i == 7)
             i;
         list.push_back(i);
         vec.push_back(i);
-        std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
-        for (int j = 0; j <= i; ++j)
+//        std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
+        for (int j = 0; j <= i; ++j) {
             EXPECT_EQ(vec.at(j), list.at(j));
+            auto node = list.get_node(j);
+            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_LE(std::abs(node->slope()), 1);
+        }
 
     }
 }
+
 
 int main(int argc, char** argv){
     testing::InitGoogleTest(&argc, argv);
