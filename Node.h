@@ -9,174 +9,159 @@ struct Node{
     T value;
     long diff=0;
     unsigned long height=1; // maximum height
-    Node *bigger= nullptr, *smaller = nullptr, *parent= nullptr;
+    Node *right= nullptr, *left = nullptr, *parent= nullptr;
 
     Node(long diff, const T& value) : diff(diff), value(value) {} // TODO T& and T&&
 
-    bool operator==(const Node& other) const {
-        return value == other.value and diff == other.diff and
-               height == other.height and bigger == other.bigger and
-               smaller == other.smaller and parent == other.parent;
+    bool operator==(const Node &other) const noexcept {
+        return value == other.value and diff == other.diff and left == other.left and right == other.right and
+               height == other.height;
     }
 
-    bool bad_slope() const {
+    unsigned long proper_height() const noexcept {
+        return 1 + std::max(left_height(), right_height());
+    }
+
+    bool bad_slope() const noexcept {
         return std::abs(slope()) > 1;
     }
 
-    bool height_is_correct() const {
-        return height == 1 + std::max(sheight(), bheight());
+    bool height_is_correct() const noexcept {
+        return height == proper_height();
     }
 
-    unsigned long index() const {
+    unsigned long index() const noexcept {
         long s = diff;
         for (Node* current = parent; current; current = current->parent)
             s += current->diff;
         assert(s >= 0);
-        return s;
-
+        return static_cast<unsigned long>(s);
     }
 
     // child of this->parent will be node instead of this
-    void set_parent_ref(Node* node){
+    void set_parent_ref(Node* node) noexcept {
         if (parent){
-            if (this == parent->bigger)
-                parent->bigger = node;
-            else if (this == parent->smaller)
-                parent->smaller = node;
+            if (this == parent->right)
+                parent->right = node;
+            else if (this == parent->left)
+                parent->left = node;
         }
     }
 
-    bool is_smaller() const {
-        return parent and parent->smaller == this;
+    bool is_left() const noexcept {
+        return parent and parent->left == this;
     }
 
-    bool is_bigger() const {
-        return parent and parent->bigger == this;
+    bool is_right() const noexcept {
+        return parent and parent->right == this;
     }
 
-    unsigned long sheight() const {
-        if (smaller)
-            return smaller->height;
-        else
-            return 0;
+    unsigned long left_height() const noexcept {
+        return left ? left->height : 0;
     }
 
-    unsigned long bheight() const {
-        if (bigger)
-            return bigger->height;
-        else
-            return 0;
+    unsigned long right_height() const noexcept {
+        return right ? right->height : 0;
     }
 
-    long slope() const {
-        return bheight() - sheight();
+    long slope() const noexcept {
+        return right_height() - left_height();
     }
-
 
     // child of this->parent will be node instead of this and node's parent will be this->parent
-    void set_parent_son(Node* node){
+    void set_parent_son(Node* node) noexcept {
         set_parent_ref(node);
         if (node)
             node->parent = parent;
     }
 
-    // creates bigger child
-    void make_bigger(long differ, const T& val){
-        assert(not bigger);
-        bigger = new Node(differ, val);
-        bigger->parent = this;
-        if (sheight() == 0)
+    void make_right(long differ, const T &val){
+        assert(not right);
+        right = new Node(differ, val);
+        right->parent = this;
+        if (left_height() == 0)
             height = 2;
-
     }
 
-    // creates smaller child
-    void make_smaller(long differ, const T& val){
-        assert(not smaller);
-        smaller = new Node(differ, val);
-        smaller->parent = this;
-        if (bheight() == 0)
+    void make_left(long differ, const T &val){
+        assert(not left);
+        left = new Node(differ, val);
+        left->parent = this;
+        if (right_height() == 0)
             height = 2;
     }
 
     /*
-        bigger will be our parent; our bigger child will be bigger smaller child
-        this will be SMALLER of bigger child
-        I saw that it is called left-rotate, but this naming suits more
+     * X.left_rotate();
+          X              Y
+         / \            / \
+        A   Y   --->   X   C
+           / \        / \
+          B   C      A   B
     */
-    void small_rotate(){
-        assert(bigger != nullptr);
-
+    void left_rotate() noexcept {
+        assert(right != nullptr);
         // dealing with heights
-        height = 1 + std::max(sheight(), bigger->sheight());
-        bigger->height = 1 + std::max(height, bigger->bheight());
-
+        height = 1 + std::max(left_height(), right->left_height());
+        right->height = 1 + std::max(height, right->right_height());
         // deal with relative offsets
-        long old_diff = diff, old_bdiff = bigger->diff;
-        bigger->diff += old_diff; // moving up, including new offset component
-        diff -= bigger->diff; // moving down, excluding extra offset component
-        if (bigger->smaller) bigger->smaller->diff += old_bdiff;
+        long old_diff = diff, old_rdiff = right->diff;
+        right->diff += old_diff; // moving up, including new offset component
+        diff -= right->diff; // moving down, excluding extra offset component
+        if (right->left) right->left->diff += old_rdiff;
 
-        Node *b = bigger, *p = parent;
+        set_parent_son(right);
 
-        set_parent_son(bigger);
+        Node* rl = right->left;
+        right->left = this;
+        parent = right;
 
-        Node* bs = bigger->smaller;
-        bigger->smaller = this;
-        parent = bigger;
-
-        bigger = bs;
-        if (bs) bs->parent = this;
+        right = rl;
+        if (rl) rl->parent = this;
     }
 
     /*
-     smaller will be our parent; our smaller child will be smaller bigger child
-     this will bi BIGGER of smaller child
-     I saw that it is called right-rotate, but this naming suits more
+     * Y.right_rotate();
+          X              Y
+         / \            / \
+        A   Y   <---   X   C
+           / \        / \
+          B   C      A   B
     */
-    void big_rotate(){
-        assert(smaller != nullptr);
-
+    void right_rotate() noexcept {
+        assert(left != nullptr);
         // dealing with heights
-        height = 1 + std::max(bheight(), smaller->bheight());
-        smaller->height = 1 + std::max(height, smaller->sheight());
-
+        height = 1 + std::max(right_height(), left->right_height());
+        left->height = 1 + std::max(height, left->left_height());
         // deal with relative offsets
-        long old_diff = diff, old_sdiff = smaller->diff;
-        smaller->diff += old_diff; // moving up, including new offset component
-        diff -= smaller->diff; // moving down, excluding extra offset component
-        if (smaller->bigger) smaller->bigger->diff += old_sdiff;
+        long old_diff = diff, old_ldiff = left->diff;
+        left->diff += old_diff; // moving up, including new offset component
+        diff -= left->diff; // moving down, excluding extra offset component
+        if (left->right) left->right->diff += old_ldiff;
 
-        Node *s = smaller, *p = parent;
+        set_parent_son(left);
 
-        set_parent_son(smaller);
+        Node* lr = left->right;
+        left->right = this; // become right child of our left child
+        parent = left;
 
-        Node* sb = smaller->bigger;
-        smaller->bigger = this; // become big child of our small child
-        parent = smaller;
-
-        smaller = sb; // get smaller's bigger child
-        if (sb) sb->parent = this;
-
+        left = lr; // get left's right child
+        if (lr) lr->parent = this;
     }
 
     // return min node, larger then current
-    Node* successor() const {
-        assert(bigger);
-        Node* current = bigger;
+    Node* successor() const noexcept {
+        assert(right);
+        Node* current = right;
         long current_diff = current->diff;
-        while (current->smaller) {
-            current = current->smaller;
+        while (current->left) {
+            current = current->left;
             current_diff += current->diff;
         }
-//            assert(current_diff > 0); // result is larger then this, but method TreeList::remove violates this (it ofsets right subtree before finding successor)
-
         return current;
-
     }
 
-    // sets proper height, assuming correctness of child heights
-    void fix_height(){
-        height = 1 + std::max(sheight(), bheight());
+    void fix_height() noexcept {
+        height = proper_height();
     }
 };

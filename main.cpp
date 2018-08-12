@@ -54,7 +54,7 @@ TEST(TreeList_test, insertion){
     for (int i = 0; i < sizeof(indices) / sizeof(*indices); ++i) {
         EXPECT_EQ(list.at(i), results[i]);
         auto node = list.get_node(i);
-        EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+        EXPECT_EQ(node->height, 1 + std::max(node->right_height(), node->left_height()));
         EXPECT_LE(std::abs(node->slope()), 1);
     }
 
@@ -75,7 +75,7 @@ TEST(TreeList_test, insertion2){
         for (int j = 0; j < vec.size(); ++j) {
             EXPECT_EQ(list.at(j), vec.at(j));
             auto node = list.get_node(i);
-            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_EQ(node->height, 1 + std::max(node->right_height(), node->left_height()));
             EXPECT_LE(std::abs(node->slope()), 1);
         }
     }
@@ -111,7 +111,7 @@ TEST(TreeList_test, deletion){
         for (int j = 0; j < vec.size(); ++j) {
             EXPECT_EQ(vec.at(j), list.at(j));
             auto node = list.get_node(j);
-            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_EQ(node->height, 1 + std::max(node->right_height(), node->left_height()));
             EXPECT_LE(std::abs(node->slope()), 1);
         }
         fout << "```mermaid\ngraph TD\n" << list << "```\n\n";
@@ -129,7 +129,7 @@ TEST(TreeList_test, push_back){
         for (int j = 0; j <= i; ++j) {
             EXPECT_EQ(elements[j], list.at(j));
             auto node = list.get_node(j);
-            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_EQ(node->height, 1 + std::max(node->right_height(), node->left_height()));
             EXPECT_LE(std::abs(node->slope()), 1);
         }
 
@@ -148,7 +148,7 @@ TEST(TreeList_test, push_back2){
         for (int j = 0; j <= i; ++j) {
             EXPECT_EQ(vec.at(j), list.at(j));
             auto node = list.get_node(j);
-            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_EQ(node->height, 1 + std::max(node->right_height(), node->left_height()));
             EXPECT_LE(std::abs(node->slope()), 1);
         }
 
@@ -183,14 +183,13 @@ TEST(TreeList_test, root_deletion){
         for (int j = 0; j < vec.size(); ++j) {
             EXPECT_EQ(vec.at(j), list.at(j));
             auto node = list.get_node(j);
-            EXPECT_EQ(node->height, 1 + std::max(node->bheight(), node->sheight()));
+            EXPECT_EQ(node->height, 1 + std::max(node->right_height(), node->left_height()));
             EXPECT_LE(std::abs(node->slope()), 1);
         }
         std::cout << "```mermaid\ngraph TD\n" << list << "```\n\n";
     }
 }
 
-// duration variable
 #define MEASURE_TIME(expr, result)\
 {\
 auto before = std::chrono::high_resolution_clock::now();\
@@ -227,7 +226,7 @@ void speed_results(unsigned long N){
         fout << duration << ' ';
 
         index = std::rand() % (i + 1);
-        MEASURE_TIME(list.set(index, 888), duration);
+        MEASURE_TIME(list[index] = 888, duration);
         fout << duration << '\n';
     }
 
