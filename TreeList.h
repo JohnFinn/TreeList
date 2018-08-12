@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Node.h"
 #include <cassert>
 #include <stdexcept>
 #include <stack>
@@ -8,185 +9,9 @@
 template <class T>
 class TreeList {
 public: // just for debugging simplicity
-
-
-    struct Node{
-        T value;
-        long diff=0;
-        unsigned long height=1; // maximum height
-        Node *bigger= nullptr, *smaller = nullptr, *parent= nullptr;
-
-        Node(long diff, const T& value) : diff(diff), value(value) {} // TODO T& and T&&
-
-        bool operator==(const Node& other) const {
-          return value == other.value and diff == other.diff and
-                 height == other.height and bigger == other.bigger and
-                 smaller == other.smaller and parent == other.parent;
-        }
-
-        bool bad_slope() const {
-            return std::abs(slope()) > 1;
-        }
-
-        bool height_is_correct() const {
-            return height == 1 + std::max(sheight(), bheight());
-        }
-
-        unsigned long index() const {
-            long s = diff;
-            for (Node* current = parent; current; current = current->parent)
-                s += current->diff;
-            assert(s >= 0);
-            return s;
-
-        }
-
-        // child of this->parent will be node instead of this
-        void set_parent_ref(Node* node){
-            if (parent){
-                if (this == parent->bigger)
-                    parent->bigger = node;
-                else if (this == parent->smaller)
-                    parent->smaller = node;
-            }
-        }
-
-        bool is_smaller() const {
-            return parent and parent->smaller == this;
-        }
-
-        bool is_bigger() const {
-            return parent and parent->bigger == this;
-        }
-
-        unsigned long sheight() const {
-            if (smaller)
-                return smaller->height;
-            else
-                return 0;
-        }
-
-        unsigned long bheight() const {
-            if (bigger)
-                return bigger->height;
-            else
-                return 0;
-        }
-
-        long slope() const {
-            return bheight() - sheight();
-        }
-
-
-        // child of this->parent will be node instead of this and node's parent will be this->parent
-        void set_parent_son(Node* node){
-            set_parent_ref(node);
-            if (node)
-                node->parent = parent;
-        }
-
-        // creates bigger child
-        void make_bigger(long differ, const T& val){
-            assert(not bigger);
-            bigger = new Node(differ, val);
-            bigger->parent = this;
-            if (sheight() == 0)
-                height = 2;
-
-        }
-
-        // creates smaller child
-        void make_smaller(long differ, const T& val){
-            assert(not smaller);
-            smaller = new Node(differ, val);
-            smaller->parent = this;
-            if (bheight() == 0)
-                height = 2;
-        }
-
-        /*
-            bigger will be our parent; our bigger child will be bigger smaller child
-            this will be SMALLER of bigger child
-            I saw that it is called left-rotate, but this naming suits more
-        */
-        void small_rotate(){
-            assert(bigger != nullptr);
-
-            // dealing with heights
-            height = 1 + std::max(sheight(), bigger->sheight());
-            bigger->height = 1 + std::max(height, bigger->bheight());
-
-            // deal with relative offsets
-            long old_diff = diff, old_bdiff = bigger->diff;
-            bigger->diff += old_diff; // moving up, including new offset component
-            diff -= bigger->diff; // moving down, excluding extra offset component
-            if (bigger->smaller) bigger->smaller->diff += old_bdiff;
-
-            Node *b = bigger, *p = parent;
-
-            set_parent_son(bigger);
-
-            Node* bs = bigger->smaller;
-            bigger->smaller = this;
-            parent = bigger;
-
-            bigger = bs;
-            if (bs) bs->parent = this;
-        }
-
-        /*
-         smaller will be our parent; our smaller child will be smaller bigger child
-         this will bi BIGGER of smaller child
-         I saw that it is called right-rotate, but this naming suits more
-        */
-        void big_rotate(){
-            assert(smaller != nullptr);
-
-            // dealing with heights
-            height = 1 + std::max(bheight(), smaller->bheight());
-            smaller->height = 1 + std::max(height, smaller->sheight());
-
-            // deal with relative offsets
-            long old_diff = diff, old_sdiff = smaller->diff;
-            smaller->diff += old_diff; // moving up, including new offset component
-            diff -= smaller->diff; // moving down, excluding extra offset component
-            if (smaller->bigger) smaller->bigger->diff += old_sdiff;
-
-            Node *s = smaller, *p = parent;
-
-            set_parent_son(smaller);
-
-            Node* sb = smaller->bigger;
-            smaller->bigger = this; // become big child of our small child
-            parent = smaller;
-
-            smaller = sb; // get smaller's bigger child
-            if (sb) sb->parent = this;
-
-        }
-
-        // return min node, larger then current
-        Node* successor() const {
-            assert(bigger);
-            Node* current = bigger;
-            long current_diff = current->diff;
-            while (current->smaller) {
-                current = current->smaller;
-                current_diff += current->diff;
-            }
-//            assert(current_diff > 0); // result is larger then this, but method TreeList::remove violates this (it ofsets right subtree before finding successor)
-
-            return current;
-
-        }
-
-        // sets proper height, assuming correctness of child heights
-        void fix_height(){
-            height = 1 + std::max(sheight(), bheight());
-        }
-    };
-
-    Node* root = nullptr;
+    typedef Node<T> NodeType;
+    typedef NodeType* NodePtr;
+    NodePtr root = nullptr;
 public:
     TreeList()= default;
     ~TreeList(){ clear(); }
@@ -232,12 +57,12 @@ public:
     // TODO pass by &, &&
     void insert(unsigned long index, const T& value){
         if (root == nullptr){
-            root = new Node(0, value);
+            root = new NodeType(0, value);
             return;
         }
 
         // offset everything after index (inclusive) by one
-        Node* current = root;
+        NodePtr current = root;
         unsigned long current_index = current->diff;
         while (true){
             if (index == current_index){
@@ -278,11 +103,11 @@ public:
     // move all elements left that lie after index
     // return Node, that has to be removed, because leftmost Node of moving side will have same index
     // if no Node with index exist, returns nullptr
-    Node* move_left(unsigned long index){
+    NodePtr move_left(unsigned long index){
         if (not root)
             return nullptr;
         // looking for node and moving parts of list to the left if we need to
-        Node* current = root;
+        NodePtr current = root;
         unsigned long current_index = current->diff;
         while (true){
             if (index == current_index){
@@ -312,11 +137,11 @@ public:
     // do nothing if no such index
     void remove(unsigned long index){
 
-        Node* target = move_left(index);
+        NodePtr target = move_left(index);
         if (not target)
             return;
 
-        Node* parent = target->parent;
+        NodePtr parent = target->parent;
 
         // removing element
         if (not target->smaller and not target->bigger){
@@ -339,7 +164,7 @@ public:
             target->set_parent_son(target->smaller);
         }
         else { // find next (min, but larger then target) and place here
-            Node* successor = target->successor();
+            NodePtr successor = target->successor();
             assert(successor != root);
             assert(successor);
             assert(not successor->smaller);
@@ -364,9 +189,9 @@ public:
     }
 
     // Node at index, nullptr if not exist
-    Node* get_node(unsigned long index) const {
+    NodePtr get_node(unsigned long index) const {
         if (not root) return nullptr;
-        Node* current = root;
+        NodePtr current = root;
         unsigned long current_index = current->diff;
         while (true){
             if (current_index == index)
@@ -390,7 +215,7 @@ public:
 
 
     T& at(unsigned long index) const {
-        Node* node = get_node(index);
+        NodePtr node = get_node(index);
         if (node)
             return node->value;
         throw std::out_of_range(std::to_string(index) + " is out of range");
@@ -405,12 +230,12 @@ public:
 
     void push_back(const T& value){
         if (root == nullptr){
-            root = new Node(0, value);
+            root = new NodeType(0, value);
             return;
         }
 
         // find last element
-        Node* current = root;
+        NodePtr current = root;
         while (current->bigger)
             current = current->bigger;
 
@@ -421,7 +246,7 @@ public:
 
     // accepts parent of inserted/deleted node
     // assumes correct height of node and unfixed height of it's parent
-    void fix(Node* node){
+    void fix(NodePtr node){
         long slope = node->slope();
         do {
             assert(slope == 2 or slope == -2 or slope == 1 or slope == -1 or slope == 0);
@@ -454,7 +279,7 @@ public:
 // each node has index, height, value
 template <class T, class stream_t>
 stream_t& operator << (stream_t& stream, TreeList<T>& tree){
-    typedef typename TreeList<T>::Node* Nodeptr;
+    typedef typename TreeList<T>::NodePtr Nodeptr;
     if (not tree.root) return stream;
 
     std::stack<Nodeptr> stack;

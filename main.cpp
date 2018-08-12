@@ -7,7 +7,6 @@
 #include <fstream>
 #include <chrono> // for time measurement
 
-
 TEST(TreeList_test, insertion){
     TreeList<unsigned long> list;
 
@@ -61,7 +60,6 @@ TEST(TreeList_test, insertion){
 
 }
 
-
 TEST(TreeList_test, insertion2){
     TreeList<int> list;
     std::vector<int> vec;
@@ -82,7 +80,6 @@ TEST(TreeList_test, insertion2){
         }
     }
 }
-
 
 TEST(TreeList_test, deletion){
     std::ofstream fout("test");
@@ -123,7 +120,6 @@ TEST(TreeList_test, deletion){
 
 }
 
-
 TEST(TreeList_test, push_back){
     TreeList<int> list;
     int elements[] = {9,8,7,6,5,4,99,22,3,2};
@@ -139,7 +135,6 @@ TEST(TreeList_test, push_back){
 
     }
 }
-
 
 TEST(TreeList_test, push_back2){
 //    std::freopen("test", "w", stdout);
@@ -163,7 +158,7 @@ TEST(TreeList_test, push_back2){
 TEST(TreeList_test, move_left){
     // not proper test
     TreeList<int> list;
-    typedef TreeList<int>::Node Node;
+    typedef TreeList<int>::NodeType Node;
     list.push_back(1);
     Node n = *list.root;
     EXPECT_EQ(list.move_left(1), nullptr);
@@ -172,7 +167,6 @@ TEST(TreeList_test, move_left){
     EXPECT_EQ(result, list.root);
     EXPECT_EQ(*result, n);
 }
-
 
 TEST(TreeList_test, root_deletion){
     TreeList<int> list;
@@ -204,8 +198,6 @@ expr;\
 auto after = std::chrono::high_resolution_clock::now();\
 result = std::chrono::duration_cast<std::chrono::nanoseconds>(after-before).count();\
 }\
-
-
 
 void speed_results(unsigned long N){
     TreeList<int> list;
@@ -274,16 +266,6 @@ void vector_speed(unsigned long N){
         fout << duration << '\n';
     }
 }
-
-
-// easer to start from IDE
-TEST(TreeList_test, speed){
-    unsigned long N = 1000000;
-    speed_results(N);
-    vector_speed(N);
-}
-
-
 
 int main(int argc, char** argv){
     testing::InitGoogleTest(&argc, argv);
