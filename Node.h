@@ -75,17 +75,17 @@ struct Node{
             node->parent = parent;
     }
 
-    void make_right(long differ, const T &val){
+    void make_right(Node<T>* node){
         assert(not right);
-        right = new Node(differ, val);
+        right = node;
         right->parent = this;
         if (left_height() == 0)
             height = 2;
     }
 
-    void make_left(long differ, const T &val){
+    void make_left(Node<T>* node){
         assert(not left);
-        left = new Node(differ, val);
+        left = node;
         left->parent = this;
         if (right_height() == 0)
             height = 2;

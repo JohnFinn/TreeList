@@ -6,9 +6,10 @@
 #include <stack>
 
 // heights of subtrees differ at most by one
-template <class T>
+template <class T, typename allocator=std::allocator<Node<T>>>
 class TreeList {
 public: // just for debugging simplicity
+    allocator _allocator;
     typedef Node<T> NodeType;
     typedef NodeType* NodePtr;
     NodePtr root = nullptr;
@@ -55,7 +56,8 @@ public:
     // TODO pass by &, &&
     void insert(unsigned long index, const T& value){
         if (root == nullptr){
-            root = new NodeType(0, value);
+            root = this->_allocator.allocate(1);
+            new (root) NodeType(0, value);
             return;
         }
 
@@ -71,13 +73,17 @@ public:
                     current = current->left;
                     // continue searching to find and insert
                 } else {
-                    current->make_left(-1, value);
+                    NodePtr node = this->_allocator.allocate(1);
+                    new (node) NodeType(-1, value);
+                    current->make_left(node);
                     break;
                 }
 
             } else if (index > current_index){ // don't need to offset anything
                 if (not current->right) { // found !!!
-                    current->make_right(1, value); // insert new node
+                    NodePtr node = this->_allocator.allocate(1);
+                    new (node) NodeType(1, value);
+                    current->make_right(node); // insert new node
                     break;
                 }
                 current = current->right;
@@ -85,7 +91,9 @@ public:
                 ++current->diff; // offset with the left half. current_index wasn't given any offset
                 ++current_index;
                 if (not current->left) {
-                    current->make_left(-1, value);
+                    NodePtr node = this->_allocator.allocate(1);
+                    new (node) NodeType(-1, value);
+                    current->make_left(node);
                     break;
                 }
                 --current->left->diff; // unoffset left half
@@ -177,7 +185,7 @@ public:
 
             target = successor; // trick to free right memory
         }
-        delete target; // don't forget to free memory
+        this->_allocator.deallocate(target, 1);
         if (not parent) // means root is deleted
             return; // don't need to fix anything if root is deleted (parent is successor's parent)
         else {
@@ -219,7 +227,8 @@ public:
 
     void push_back(const T& value){
         if (root == nullptr){
-            root = new NodeType(0, value);
+            root = this->_allocator.allocate(1);
+            new (root) NodeType(0, value);
             return;
         }
 
@@ -228,7 +237,9 @@ public:
         while (current->right)
             current = current->right;
 
-        current->make_right(1, value);
+        NodePtr node = this->_allocator.allocate(1);
+        new (node) NodeType(1, value);
+        current->make_right(node);
         fix(current);
 
     }
