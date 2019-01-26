@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TreeListIterator.cpp"
 #include "Node.h"
 #include <cassert>
 #include <stdexcept>
@@ -273,6 +274,13 @@ public:
                 (not node->parent->height_is_correct() or node->parent->bad_slope())));
     }
 
+    TreeListIterator<T> begin(){ // TODO
+        return TreeListIterator<T>(this->root);
+    }
+
+    TreeListIterator<T> end(){
+        return TreeListIterator<T>(nullptr);
+    }
 };
 
 // output mermaid graph
