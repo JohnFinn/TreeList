@@ -52,7 +52,8 @@ public:
         return *this;
     }
 
-    void clear(){
+    void clear()
+    {
         // TODO improve by iterating through all nodes
         while (root)
             remove(root->diff);
