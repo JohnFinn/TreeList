@@ -17,23 +17,15 @@ public:
     TreeList()= default;
     ~TreeList(){ clear(); }
 
-    TreeList(TreeList&& other) noexcept : root(other.root) { if (&other != this) other.root = nullptr; }
-
-    TreeList(const TreeList& other){ *this = other; }
-
-    TreeList& operator=(TreeList&& other) noexcept {
-        if (this == &other)
-            return *this;
-        root = other.root;
-        other.root = nullptr;
-        return *this;
+    void swap(TreeList& other)
+    {
+        std::swap(root, other.root);
+        std::swap(_allocator, other._allocator);
     }
 
-    TreeList& operator=(const TreeList& other){
+    TreeList(const TreeList& other)
+    {
         // TODO improve performance
-        if (this == &other)
-            return *this;
-        clear();
         for (unsigned long index = 0; true; ++index){
             try{
                 insert(index, other.at(index));
@@ -41,6 +33,22 @@ public:
                 break;
             }
         }
+    }
+
+    TreeList(TreeList&& other) noexcept { swap(other); }
+
+    TreeList& operator=(TreeList&& other) noexcept
+    {
+        swap(other);
+        return *this;
+    }
+
+    TreeList& operator=(const TreeList& other)
+    {
+        if (this == &other)
+            return *this;
+        TreeList copy(other);
+        swap(copy);
         return *this;
     }
 
