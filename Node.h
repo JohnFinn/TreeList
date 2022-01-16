@@ -11,7 +11,7 @@ struct Node{
     unsigned long height=1; // maximum height
     Node *right= nullptr, *left = nullptr, *parent= nullptr;
 
-    Node(long diff, const T& value) : diff(diff), value(value) {} // TODO T& and T&&
+    Node(long diff, T value) : diff(diff), value(std::move(value)) {}
 
     bool operator==(const Node &other) const noexcept {
         return value == other.value and diff == other.diff and left == other.left and right == other.right and
